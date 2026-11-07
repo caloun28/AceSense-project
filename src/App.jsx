@@ -23,12 +23,12 @@ export default function App() {
   return (
     <div className="app-container">
       <div className="app-header">
-        <div className="app-header-top">
-          <h1>AceSense</h1>
-          <span className={`status-badge ${isConnected ? 'connected' : isSearching ? 'searching' : 'disconnected'}`}>
-            {isConnected ? 'RAKETA PŘIPOJENA' : isSearching ? 'HLEDÁM RAKETU...' : 'ODPOJENO'}
-          </span>
-        </div>
+
+        <h1>AceSense</h1>
+        <span className={`status-badge ${isConnected ? 'connected' : isSearching ? 'searching' : 'disconnected'}`}>
+          {isConnected ? 'RAKETA PŘIPOJENA' : isSearching ? 'HLEDÁM RAKETU...' : 'ODPOJENO'}
+        </span>
+
         <button
           className={`btn-toggle ${isConnected ? 'disconnect' : 'connect'}`}
           onClick={isConnected ? disconnect : connect}
@@ -40,7 +40,7 @@ export default function App() {
 
 
 
-      <section className="card-hero">
+      <section className="card-hero card">
         <span className="card-title">POSLEDNÍ ÚDER</span>
         {latestStroke ? (
           <>
@@ -60,7 +60,7 @@ export default function App() {
         )}
       </section>
 
-      <section className="card-history">
+      <section className="card-history card">
         <div className="history-header">
           <span>Historie úderů</span>
           <span>{history.length} celkem</span>
