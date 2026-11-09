@@ -4,14 +4,17 @@ const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
 const TX_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 const RX_CHAR_UUID = "19b10002-e8f2-537e-4f6c-d104768a1214";
 
+const BATTERY_SERVICE = "180f";
+const BATTERY_LEVEL_CHAR = "2a19";
+
 export function useAceSenseBLE(onStrokeReceived) {
     const [device, setDevice] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isSearching, setIsSearching] = useState(false);
+    const [batteryLevel, setBatteryLevel] = useState(null);
 
     const strokeCallbackRef = useRef(onStrokeReceived);
     const intentionalDisconnectRef = useRef(false);
-
 
     const txCharRef = useRef(null);
     const rxCharRef = useRef(null);
@@ -51,8 +54,8 @@ export function useAceSenseBLE(onStrokeReceived) {
 
     const setupGattConnection = async (bleDevice) => {
         const server = await bleDevice.gatt.connect();
-        const service = await server.getPrimaryService(SERVICE_UUID);
 
+        const service = await server.getPrimaryService(SERVICE_UUID);
         const txCharacteristic = await service.getCharacteristic(TX_CHAR_UUID);
         const rxCharacteristic = await service.getCharacteristic(RX_CHAR_UUID);
 
@@ -84,12 +87,25 @@ export function useAceSenseBLE(onStrokeReceived) {
         };
 
         txCharacteristic.addEventListener('characteristicvaluechanged', handler);
-
         txCharRef.current = txCharacteristic;
         rxCharRef.current = rxCharacteristic;
         notificationHandlerRef.current = handler;
-
         await txCharacteristic.startNotifications();
+
+        try {
+            const batteryService = await server.getPrimaryService(BATTERY_SERVICE);
+            const batteryChar = await batteryService.getCharacteristic(BATTERY_LEVEL_CHAR);
+
+            const initialValue = await batteryChar.readValue();
+            setBatteryLevel(initialValue.getUint8(0));
+
+            await batteryChar.startNotifications();
+            batteryChar.addEventListener('characteristicvaluechanged', (e) => {
+                setBatteryLevel(e.target.value.getUint8(0));
+            });
+        } catch (err) {
+            console.warn("Služba pro baterii není dostupná:", err);
+        }
 
         setDevice(bleDevice);
         setIsConnected(true);
@@ -106,7 +122,7 @@ export function useAceSenseBLE(onStrokeReceived) {
                     { namePrefix: 'AceSense' },
                     { namePrefix: 'Arduino' }
                 ],
-                optionalServices: [SERVICE_UUID]
+                optionalServices: [SERVICE_UUID, BATTERY_SERVICE]
             });
 
             bleDevice.addEventListener('gattserverdisconnected', () => {
@@ -151,6 +167,7 @@ export function useAceSenseBLE(onStrokeReceived) {
             }
             setIsConnected(false);
             setDevice(null);
+            setBatteryLevel(null);
         } finally {
             setIsSearching(false);
         }
@@ -166,6 +183,7 @@ export function useAceSenseBLE(onStrokeReceived) {
         }
         setIsConnected(false);
         setDevice(null);
+        setBatteryLevel(null);
     }, [device]);
 
     useEffect(() => {
@@ -179,5 +197,5 @@ export function useAceSenseBLE(onStrokeReceived) {
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [device]);
 
-    return { connect, disconnect, isConnected, isSearching };
+    return { connect, disconnect, isConnected, isSearching, batteryLevel };
 }
