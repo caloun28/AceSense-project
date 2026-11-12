@@ -4,7 +4,7 @@ const SERVICE_UUID = "19b10000-e8f2-537e-4f6c-d104768a1214";
 const TX_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 const RX_CHAR_UUID = "19b10002-e8f2-537e-4f6c-d104768a1214";
 
-const BATTERY_SERVICE = "180f";
+const BATTERY_SERVICE = "battery_service";
 const BATTERY_LEVEL_CHAR = "2a19";
 
 export function useAceSenseBLE(onStrokeReceived) {

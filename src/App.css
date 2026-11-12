@@ -310,6 +310,70 @@ body {
   color: var(--clay-solid);
 }
 
+.history-grouped-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.history-grouped-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.history-grouped-container::-webkit-scrollbar-thumb {
+  background: var(--surface-border);
+  border-radius: 4px;
+}
+
+.rally-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rally-group-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--surface-border);
+  padding-bottom: 4px;
+  margin-left: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.rally-count {
+  font-weight: 600;
+  color: var(--surface-border);
+}
+
+.history-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rally-badge-hero {
+  background: var(--clay-badge-bg);
+  color: var(--clay-hover);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-weight: 800;
+  font-size: 0.75rem;
+}
+
 @media (max-width: 350px) {
   .app-header h1 {
     font-size: 1.3rem;
