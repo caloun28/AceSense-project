@@ -5,7 +5,7 @@ const TX_CHAR_UUID = "19b10001-e8f2-537e-4f6c-d104768a1214";
 const RX_CHAR_UUID = "19b10002-e8f2-537e-4f6c-d104768a1214";
 
 const BATTERY_SERVICE = "battery_service";
-const BATTERY_LEVEL_CHAR = "2a19";
+const BATTERY_LEVEL_CHAR = "battery_level";
 
 export function useAceSenseBLE(onStrokeReceived) {
     const [device, setDevice] = useState(null);
@@ -27,14 +27,16 @@ export function useAceSenseBLE(onStrokeReceived) {
     }, [onStrokeReceived]);
 
     const parseStroke = (payload) => {
-        const mainParts = payload.trim().split('|');
-        const seqId = mainParts.length > 1 ? parseInt(mainParts[0], 10) : 0;
-        const data = mainParts.length > 1 ? mainParts[1] : mainParts[0];
+        const parts = payload.trim().split('|');
+        const seqId = parts.length > 0 ? parseInt(parts[0], 10) : 0;
+        const data = parts.length > 1 ? parts[1] : '';
+        const deltaMs = parts.length > 2 ? parseInt(parts[2], 10) : 0;
 
-        const parts = data.split(' ');
-        const code = parts[0] || '';
-        const speedRaw = parts[1] || '0';
+        const dataParts = data.split(' ');
+        const code = dataParts[0] || '';
+        const speedRaw = dataParts[1] || '0';
         const speed = parseInt(speedRaw, 10) || 0;
+        const rallyId = parseInt(dataParts[2], 10) || 1;
 
         let side = code.startsWith('BH') ? 'Bekhend' : 'Forhend';
         let type = 'Úder';
@@ -42,13 +44,16 @@ export function useAceSenseBLE(onStrokeReceived) {
         else if (code.includes('-S')) type = 'Slice';
         else if (code.includes('-V')) type = 'Volej';
 
+        const realStrokeDate = new Date(Date.now() - deltaMs);
+
         return {
             id: seqId,
-            timestamp: new Date().toLocaleTimeString(),
+            rallyId: rallyId,
+            realDate: realStrokeDate,
+            timestamp: realStrokeDate.toLocaleTimeString('cs-CZ'),
             side,
             type,
             speed,
-            raw: payload
         };
     };
 
@@ -77,7 +82,7 @@ export function useAceSenseBLE(onStrokeReceived) {
                     if (rxCharRef.current) {
                         try {
                             const ackMsg = new TextEncoder().encode(`ACK ${parsed.id}`);
-                            await rxCharRef.current.writeValue(ackMsg);
+                            await rxCharRef.current.writeValueWithoutResponse(ackMsg);
                         } catch (err) {
                             console.error("Chyba při odesílání ACK:", err);
                         }

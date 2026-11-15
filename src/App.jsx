@@ -1,56 +1,17 @@
-import React, { useState, useRef } from 'react';
+import React from 'react';
 import { useAceSenseBLE } from './hooks/useAceSenseBLE';
+import { useStrokes } from './hooks/useStrokes';
 import { Battery } from "lucide-react";
 import './App.css';
 
 export default function App() {
-  const [latestStroke, setLatestStroke] = useState(null);
-  const [history, setHistory] = useState([]);
+  // 1. Získáme logiku úderů a databáze z našeho nového hooku
+  const { latestStroke, history, groupedHistory, handleStrokeReceived } = useStrokes();
 
-  const lastStrokeTimeRef = useRef(0);
-  const rallyCounterRef = useRef(1);
-  const RALLY_TIMEOUT_MS = 5000;
-
-  const handleStrokeReceived = (stroke) => {
-    const now = Date.now();
-
-    setHistory((prevHistory) => {
-      const isDuplicate = prevHistory.some((item) => item.id === stroke.id);
-
-      if (isDuplicate) {
-        return prevHistory;
-      }
-
-      if (lastStrokeTimeRef.current !== 0) {
-        const timeSinceLastStroke = now - lastStrokeTimeRef.current;
-        if (timeSinceLastStroke > RALLY_TIMEOUT_MS) {
-          rallyCounterRef.current += 1;
-        }
-      }
-
-      lastStrokeTimeRef.current = now;
-
-      const strokeWithContext = {
-        ...stroke,
-        rallyId: rallyCounterRef.current
-      };
-
-      setLatestStroke(strokeWithContext);
-      return [strokeWithContext, ...prevHistory];
-    });
-  };
+  // 2. Propojíme Bluetooth a předáme mu funkci na zpracování úderu
   const { connect, disconnect, isConnected, isSearching, batteryLevel } = useAceSenseBLE(handleStrokeReceived);
 
-  const groupedHistory = history.reduce((acc, stroke) => {
-    let group = acc.find(g => g.rallyId === stroke.rallyId);
-    if (!group) {
-      group = { rallyId: stroke.rallyId, strokes: [] };
-      acc.push(group);
-    }
-    group.strokes.push(stroke);
-    return acc;
-  }, []);
-
+  // 3. Čisté UI
   return (
     <div className="app-container">
       <div className="app-header">
@@ -75,7 +36,6 @@ export default function App() {
             <div className="racket-name">HEAD</div>
             <div className="racket-model">Graphene 360 Speed Lite</div>
           </div>
-
           <div className={`battery-badge ${batteryLevel === null ? 'offline' : (batteryLevel > 20 ? 'high' : 'low')}`}>
             <Battery size={20} strokeWidth={3} color="currentColor" />
             {batteryLevel !== null ? `${batteryLevel}%` : '--%'}
@@ -96,7 +56,6 @@ export default function App() {
             <div className="card-meta">
               <span className="rally-badge-hero">Výměna #{latestStroke.rallyId}</span>
               <span>Čas: {latestStroke.timestamp}</span>
-              <span className="raw-tag">{latestStroke.raw}</span>
             </div>
           </>
         ) : (
