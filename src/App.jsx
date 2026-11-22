@@ -1,103 +1,109 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAceSenseBLE } from './hooks/useAceSenseBLE';
 import { useStrokes } from './hooks/useStrokes';
-import { Battery } from "lucide-react";
+import { Sidebar, Topbar, BottomNav } from './components/Navigation';
+import DashboardPage from './pages/DashboardPage';
+import HistoryPage from './pages/HistoryPage';
+import StatsPage from './pages/StatsPage';
+import SettingsPage from './pages/SettingsPage';
 import './App.css';
 
 export default function App() {
-  // 1. Získáme logiku úderů a databáze z našeho nového hooku
-  const { latestStroke, history, groupedHistory, handleStrokeReceived } = useStrokes();
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [dateFilter, setDateFilter] = useState('today');
+  const [sideFilter, setSideFilter] = useState('all');
 
-  // 2. Propojíme Bluetooth a předáme mu funkci na zpracování úderu
+  const [racketProfile, setRacketProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('acesense_racket');
+      return saved ? JSON.parse(saved) : {
+        brand: 'HEAD',
+        model: 'Graphene 360 Speed Lite',
+        hand: 'Pravák'
+      };
+    } catch {
+      return { brand: 'HEAD', model: 'Graphene 360 Speed Lite', hand: 'Pravák' };
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('acesense_racket', JSON.stringify(racketProfile));
+    } catch (e) {
+      console.warn('Nelze uložit nastavení do localStorage', e);
+    }
+  }, [racketProfile]);
+
+  const {
+    latestStroke,
+    todayStrokes,
+    allHistory,
+    filteredHistory,
+    groupedSessions,
+    handleStrokeReceived
+  } = useStrokes(dateFilter, sideFilter);
+
   const { connect, disconnect, isConnected, isSearching, batteryLevel } = useAceSenseBLE(handleStrokeReceived);
 
-  // 3. Čisté UI
   return (
-    <div className="app-container">
-      <div className="app-header">
-        <h1>AceSense</h1>
-        <span className={`status-badge ${isConnected ? 'connected' : isSearching ? 'searching' : 'disconnected'}`}>
-          {isConnected ? 'RAKETA PŘIPOJENA' : isSearching ? 'HLEDÁM RAKETU...' : 'ODPOJENO'}
-        </span>
+    <div className="app-shell">
+      <Sidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        batteryLevel={batteryLevel}
+      />
 
-        <button
-          className={`btn-toggle ${isConnected ? 'disconnect' : 'connect'}`}
-          onClick={isConnected ? disconnect : connect}
-          disabled={isSearching}
-        >
-          {isConnected ? 'Odpojit' : 'Připojit raketu'}
-        </button>
+      <div className="main-area">
+        <Topbar
+          activeTab={activeTab}
+          isConnected={isConnected}
+          isSearching={isSearching}
+          batteryLevel={batteryLevel}
+          onConnect={connect}
+          onDisconnect={disconnect}
+        />
+
+        <main className="page-content">
+          {activeTab === 'dashboard' && (
+            <DashboardPage
+              racketProfile={racketProfile}
+              batteryLevel={batteryLevel}
+              latestStroke={latestStroke}
+              todayStrokes={todayStrokes}
+              onOpenHistory={() => setActiveTab('history')}
+            />
+          )}
+
+          {activeTab === 'history' && (
+            <HistoryPage
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              sideFilter={sideFilter}
+              setSideFilter={setSideFilter}
+              filteredHistory={filteredHistory}
+              groupedSessions={groupedSessions}
+            />
+          )}
+
+          {activeTab === 'stats' && (
+            <StatsPage
+              todayStrokes={todayStrokes}
+              allHistory={allHistory}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SettingsPage
+              racketProfile={racketProfile}
+              setRacketProfile={setRacketProfile}
+              batteryLevel={batteryLevel}
+              totalStrokesCount={allHistory.length}
+            />
+          )}
+        </main>
       </div>
 
-      <section className="card-racket card">
-        <span className="card-title">MOJE RAKETA</span>
-        <div className="racket-info">
-          <div>
-            <div className="racket-name">HEAD</div>
-            <div className="racket-model">Graphene 360 Speed Lite</div>
-          </div>
-          <div className={`battery-badge ${batteryLevel === null ? 'offline' : (batteryLevel > 20 ? 'high' : 'low')}`}>
-            <Battery size={20} strokeWidth={3} color="currentColor" />
-            {batteryLevel !== null ? `${batteryLevel}%` : '--%'}
-          </div>
-        </div>
-      </section>
-
-      <section className="card-hero card">
-        <span className="card-title">POSLEDNÍ ÚDER</span>
-        {latestStroke ? (
-          <>
-            <div className="stroke-highlight">
-              <span className={`stroke-type ${latestStroke.side === 'Forhend' ? 'fh' : 'bh'}`}>
-                {latestStroke.side} {latestStroke.type}
-              </span>
-              <span className="stroke-speed">{latestStroke.speed} km/h</span>
-            </div>
-            <div className="card-meta">
-              <span className="rally-badge-hero">Výměna #{latestStroke.rallyId}</span>
-              <span>Čas: {latestStroke.timestamp}</span>
-            </div>
-          </>
-        ) : (
-          <p className="placeholder-text">Zatím žádný úder. Připoj raketu a švihni.</p>
-        )}
-      </section>
-
-      <section className="card-history card">
-        <div className="history-header">
-          <span>Historie úderů</span>
-          <span>{history.length} celkem</span>
-        </div>
-
-        {groupedHistory.length === 0 ? (
-          <p className="placeholder-text">Zatím prázdno</p>
-        ) : (
-          <div className="history-grouped-container">
-            {groupedHistory.map((group) => (
-              <div key={`rally-${group.rallyId}`} className="rally-group">
-                <div className="rally-group-title">
-                  Výměna #{group.rallyId}
-                  <span className="rally-count">({group.strokes.length} úderů)</span>
-                </div>
-                <ul className="history-list">
-                  {group.strokes.map((item) => (
-                    <li
-                      key={item.id}
-                      className={`history-item ${item.side === 'Forhend' ? 'fh' : 'bh'}`}
-                    >
-                      <div className="history-item-left">
-                        <span className="history-time">[{item.timestamp}]</span>
-                        <span className="history-tag">{item.side} {item.type}</span>
-                      </div>
-                      <span className="history-speed">{item.speed} km/h</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
     </div>
   );
 }

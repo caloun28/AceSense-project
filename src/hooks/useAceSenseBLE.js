@@ -40,6 +40,21 @@ export function useAceSenseBLE(onStrokeReceived) {
 
         let side = code.startsWith('BH') ? 'Bekhend' : 'Forhend';
         let type = 'Úder';
+
+        /* [WIP - SERVIS A SMEČ] Mapování pro nadhlavové údery (zatím zakomentováno)
+        if (code.startsWith('BH')) {
+            side = 'Bekhend';
+        } else if (code.startsWith('SE')) {
+            side = 'Servis';
+            type = '';
+        } else if (code.startsWith('SM')) {
+            side = 'Smeč';
+            type = '';
+        } else {
+            side = 'Forhend';
+        }
+        */
+
         if (code.includes('-T')) type = 'Topspin';
         else if (code.includes('-S')) type = 'Slice';
         else if (code.includes('-V')) type = 'Volej';
